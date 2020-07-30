@@ -393,8 +393,12 @@ MigrationBackup/
 #------------------#
 # Project-specific #
 #------------------#
+**.bak
 /src/CustomUrls.Core/App_Plugins
+/src/CustomUrls.Web/App_Browsers
 /src/CustomUrls.Web/App_Data
 /src/CustomUrls.Web/App_Plugins
+/src/CustomUrls.Web/default.aspx
+/src/CustomUrls.Web/Media
 /src/CustomUrls.Web/Umbraco
 /src/CustomUrls.Web/Umbraco_Client
