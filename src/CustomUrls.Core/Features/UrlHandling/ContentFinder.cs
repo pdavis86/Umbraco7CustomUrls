@@ -2,6 +2,6 @@
 {
     public class ContentFinder : VortoUrlSegments.VortoUrlContentFinder
     {
-        override 
     }
+
 }
