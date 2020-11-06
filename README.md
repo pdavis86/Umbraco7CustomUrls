@@ -63,9 +63,14 @@ VortoUrlProvider and VortoUrlContentFinder are abstract classes as some of their
 
 
 ## Try it out
-This solution is configured so you can checkout the code and test it immediately. You will however need:
+This solution is configured so you can checkout the code and test it immediately. 
+
+If you want to get the culture from the domain, you will however need:
 - IIS installed and configured to point to the "src" directory
 - Visual Studio running as Administrator so the web project can use IIS
+- Configure host names and cultures on a node in the Umbraco tree
+
+If you want to log into Umbraco, the username is pdavis86@hotmail.co.uk and the password is Password123#
 
 ## Troubleshooting
 If you are having issues, it may be because you have changed the configuration. Republish the entire site to start a new cache file.

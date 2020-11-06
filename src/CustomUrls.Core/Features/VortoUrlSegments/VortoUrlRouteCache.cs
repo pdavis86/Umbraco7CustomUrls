@@ -220,7 +220,7 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
                     var rootContentId = rootIds.First();
                     foreach (var item in nonDomainRoots)
                     {
-                        LogHelper.Warn(MethodBase.GetCurrentMethod().DeclaringType, $"Content item {item.Name} is on the content root but does not have a domain");
+                        //Not important - LogHelper.Warn(MethodBase.GetCurrentMethod().DeclaringType, $"Content item '{item.Name}' is on the content root but does not have a domain");
                         AddContentToCache(rootContentId, item.Id, urlProvider);
                     }
                 }
@@ -417,12 +417,14 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
 
             if (startingPoint == null)
             {
+                //This should never happen. If it does, there's something wrong with the cache!
                 LogHelper.Warn(MethodBase.GetCurrentMethod().DeclaringType, $"No starting point content item was found for element ID {elementId}");
                 return null;
             }
 
             if (!int.TryParse(segments[0], out var rootContentId))
             {
+                //This should never happen. If it does, there's something wrong with the cache!
                 LogHelper.Warn(MethodBase.GetCurrentMethod().DeclaringType, $"Invalid root content ID for element ID {elementId}");
                 return null;
             }

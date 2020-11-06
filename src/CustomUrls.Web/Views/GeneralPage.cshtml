@@ -1,30 +1,7 @@
-﻿@using Our.Umbraco.Vorto.Extensions
-@using ContentModels = Umbraco.Web.PublishedContentModels;
+﻿@using ContentModels = Umbraco.Web.PublishedContentModels;
 @inherits Umbraco.Web.Mvc.UmbracoTemplatePage<ContentModels.GeneralPage>
 @{
-    Layout = null;
-
-    var allContent = Umbraco.TypedContent(1062).DescendantsOrSelf();
+    Layout = "/Views/Layouts/Main.cshtml";
 }
 
-<h1>@Model.Content.Name</h1>
-
-<ul>
-    @foreach (var item in allContent)
-    {
-        <li>
-            <a href="@item.Url">@item.Name</a>
-        </li>
-    }
-</ul>
-
-<p>Culture is @System.Threading.Thread.CurrentThread.CurrentUICulture.Name</p>
-
-@Model.Content.GetVortoValue("body")
-
-<h2>Test POST form</h2>
-
-<form method="post">
-    <input type="text" name="searchterm" />
-    <input type="submit" />
-</form>
+This is using the general page template
