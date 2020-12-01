@@ -24,18 +24,20 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
         private const string _elementAttributeNameId = "id";
         private const string _elementAttributeNameContentId = "contentid";
 
+        private static readonly object ctorlock = new object();
+        private static VortoUrlRouteCache _instance;
+        private static string _cacheFilePath;
+        private static readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
+
         private XDocument _cacheFile;
-        private bool _cacheIsDirty;
-        private bool _rootsAreMissing;
-        private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
+        private int _cacheIsDirty;
+        private int _rootsAreMissing;
 
         private VortoUrlRouteCache()
         {
             //Singleton
         }
 
-        private static readonly object ctorlock = new object();
-        private static VortoUrlRouteCache _instance;
         public static VortoUrlRouteCache Current
         {
             get
@@ -47,30 +49,18 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
                         if (_instance == null)
                         {
                             _instance = new VortoUrlRouteCache();
+                            _cacheFilePath = HttpContext.Current.Server.MapPath("/App_Data/VortoUrlSegments/routecache.xml");
                             _instance.LoadOrCreateCacheFile();
                         }
                     }
                 }
-                if (_instance._rootsAreMissing)
+                if (_instance._rootsAreMissing > 0)
                 {
                     _instance.AddRootsToCacheFile();
-                    _instance._rootsAreMissing = false;
+                    Interlocked.Exchange(ref _instance._rootsAreMissing, 0);
                     _instance.WriteCacheFileToDisk();
                 }
                 return _instance;
-            }
-        }
-
-        private string _cacheFilePath;
-        private string CacheFilePath
-        {
-            get
-            {
-                if (string.IsNullOrWhiteSpace(_cacheFilePath))
-                {
-                    _cacheFilePath = HttpContext.Current.Server.MapPath("/App_Data/VortoUrlSegments/routecache.xml");
-                }
-                return _cacheFilePath;
             }
         }
 
@@ -117,7 +107,7 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
                         {
                             if (node.Parent == _cacheFile.Root)
                             {
-                                _rootsAreMissing = true;
+                                Interlocked.Increment(ref _rootsAreMissing);
                             }
                             node.Remove();
                         }
@@ -177,14 +167,26 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
 
         public void StartNewCacheFile()
         {
-            _cacheFile = new XDocument();
-            _cacheFile.Add(new XElement(_elementNameRoot));
+            try
+            {
+                _locker.TryEnterWriteLock(VortoUrlService.Current.CacheWriteTimeout);
 
-            _cacheFile.Changed += CacheChanged;
+                _cacheFile = new XDocument();
+                _cacheFile.Add(new XElement(_elementNameRoot));
+                _cacheFile.Changed += CacheChanged;
+            }
+            catch (Exception ex)
+            {
+                LogHelper.Error(MethodBase.GetCurrentMethod().DeclaringType, "Something went wrong trying to create a new in-memory cache", ex);
+            }
+            finally
+            {
+                _locker.ExitWriteLock();
+            }
 
             AddRootsToCacheFile();
 
-            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(CacheFilePath));
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(_cacheFilePath));
             WriteCacheFileToDisk();
         }
 
@@ -218,7 +220,7 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
                     var rootContentId = rootIds.First();
                     foreach (var item in nonDomainRoots)
                     {
-                        LogHelper.Warn(MethodBase.GetCurrentMethod().DeclaringType, $"Content item {item.Name} is on the content root but does not have a domain");
+                        //Not important - LogHelper.Warn(MethodBase.GetCurrentMethod().DeclaringType, $"Content item '{item.Name}' is on the content root but does not have a domain");
                         AddContentToCache(rootContentId, item.Id, urlProvider);
                     }
                 }
@@ -232,11 +234,13 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
                 return;
             }
 
-            if (System.IO.File.Exists(CacheFilePath))
+            if (System.IO.File.Exists(_cacheFilePath))
             {
                 try
                 {
-                    _cacheFile = XDocument.Load(CacheFilePath);
+                    _locker.TryEnterWriteLock(VortoUrlService.Current.CacheWriteTimeout);
+
+                    _cacheFile = XDocument.Load(_cacheFilePath);
                     _cacheFile.Changed += CacheChanged;
                     return;
                 }
@@ -245,6 +249,10 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
                     //File is corrupt but let the code continue to create a new file
                     LogHelper.Error(MethodBase.GetCurrentMethod().DeclaringType, "The Vorto URL Route Cache file was corrupt", ex);
                 }
+                finally
+                {
+                    _locker.ExitWriteLock();
+                }
             }
 
             StartNewCacheFile();
@@ -252,20 +260,20 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
 
         private void CacheChanged(object sender, XObjectChangeEventArgs e)
         {
-            _cacheIsDirty = true;
+            Interlocked.Increment(ref _cacheIsDirty);
         }
 
         private void WriteCacheFileToDisk()
         {
-            if (!_cacheIsDirty)
+            if (_cacheIsDirty == 0)
             {
                 return;
             }
             try
             {
                 _locker.TryEnterWriteLock(VortoUrlService.Current.CacheWriteTimeout);
-                _cacheFile.Save(CacheFilePath);
-                _cacheIsDirty = false;
+                _cacheFile.Save(_cacheFilePath);
+                Interlocked.Exchange(ref _cacheIsDirty, 0);
             }
             catch (Exception ex)
             {
@@ -409,12 +417,14 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
 
             if (startingPoint == null)
             {
+                //This should never happen. If it does, there's something wrong with the cache!
                 LogHelper.Warn(MethodBase.GetCurrentMethod().DeclaringType, $"No starting point content item was found for element ID {elementId}");
                 return null;
             }
 
             if (!int.TryParse(segments[0], out var rootContentId))
             {
+                //This should never happen. If it does, there's something wrong with the cache!
                 LogHelper.Warn(MethodBase.GetCurrentMethod().DeclaringType, $"Invalid root content ID for element ID {elementId}");
                 return null;
             }
