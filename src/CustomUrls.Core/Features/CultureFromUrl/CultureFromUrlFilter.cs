@@ -17,11 +17,16 @@ namespace CustomUrls.Core.Features.CultureFromUrl
                 return;
             }
 
-            var culture = CultureFromUrlService.Current.GetCultureInfo(filterContext.RequestContext.HttpContext.Request.Url);
+            if (!Uri.TryCreate(filterContext.HttpContext.Request.Url, filterContext.HttpContext.Request.RawUrl, out var url))
+            {
+                url = filterContext.HttpContext.Request.Url;
+            }
+
+            var culture = CultureFromUrlService.Current.GetCultureInfo(url);
 
             if (culture == null)
             {
-                var domain = UrlHelper.GetUmbracoDomain(filterContext.RequestContext.HttpContext.Request.Url);
+                var domain = UrlHelper.GetUmbracoDomain(url);
 
                 if (domain != null)
                 {
