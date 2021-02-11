@@ -431,7 +431,6 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
 
             var startingPointContent = GetContentFromXmlElement(startingPoint);
 
-            var levelCounter = 1;
             var contentToScan = startingPointContent.Children.ToList();
             do
             {
@@ -453,10 +452,9 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
                     break;
                 }
 
-                levelCounter++;
                 contentToScan = contentToScan.SelectMany(x => x.Children).ToList();
 
-            } while (contentToScan.Count > 0 && levelCounter <= segments.Length);
+            } while (contentToScan.Count > 0);
 
             return content;
         }
