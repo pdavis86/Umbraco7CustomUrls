@@ -405,7 +405,7 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
             var segments = elementId.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
 
             XElement startingPoint = null;
-            for (var i = segments.Length - 1; i >= 0; i--)
+            for (var i = segments.Length; i > 0; i--)
             {
                 var id = string.Join("/", segments.Take(i));
                 startingPoint = GetElementById(id);
