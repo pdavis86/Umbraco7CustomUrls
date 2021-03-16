@@ -404,8 +404,18 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
 
             var segments = elementId.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
 
+            if (!int.TryParse(segments[0], out var rootContentId))
+            {
+                //This should never happen. If it does, there's something wrong with the cache!
+                LogHelper.Warn(MethodBase.GetCurrentMethod().DeclaringType, $"Invalid root content ID for element ID {elementId}");
+
+                Interlocked.Increment(ref _rootsAreMissing);
+
+                return null;
+            }
+
             XElement startingPoint = null;
-            for (var i = segments.Length; i > 0; i--)
+            for (var i = segments.Length - 1; i > 0; i--)
             {
                 var id = string.Join("/", segments.Take(i));
                 startingPoint = GetElementById(id);
@@ -424,16 +434,6 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
                 _cacheFile.Save(debugFilePath);
 
                 _instance = null;
-
-                return null;
-            }
-
-            if (!int.TryParse(segments[0], out var rootContentId))
-            {
-                //This should never happen. If it does, there's something wrong with the cache!
-                LogHelper.Warn(MethodBase.GetCurrentMethod().DeclaringType, $"Invalid root content ID for element ID {elementId}");
-
-                Interlocked.Increment(ref _rootsAreMissing);
 
                 return null;
             }
