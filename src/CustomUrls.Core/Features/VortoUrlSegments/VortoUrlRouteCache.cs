@@ -419,6 +419,12 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
             {
                 //This should never happen. If it does, there's something wrong with the cache!
                 LogHelper.Warn(MethodBase.GetCurrentMethod().DeclaringType, $"No starting point content item was found for element ID {elementId}");
+
+                var debugFilePath = HttpContext.Current.Server.MapPath($"/App_Data/VortoUrlSegments/routecache {DateTime.UtcNow.ToString("yyyy-MM-dd HH-mm-ss-fff")}.xml");
+                _cacheFile.Save(debugFilePath);
+
+                _instance = null;
+
                 return null;
             }
 
@@ -426,6 +432,9 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
             {
                 //This should never happen. If it does, there's something wrong with the cache!
                 LogHelper.Warn(MethodBase.GetCurrentMethod().DeclaringType, $"Invalid root content ID for element ID {elementId}");
+
+                Interlocked.Increment(ref _rootsAreMissing);
+
                 return null;
             }
 
