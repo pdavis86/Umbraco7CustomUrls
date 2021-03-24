@@ -287,7 +287,12 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
 
         private IEnumerable<XElement> GetElementsByAttributeValue(string attributeName, string value)
         {
-            return _cacheFile.Root.Descendants().Where(x =>
+            var descendants = _cacheFile.Root?.Descendants();
+            if (descendants == null)
+            {
+                return Enumerable.Empty<XElement>();
+            }
+            return descendants.Where(x =>
                 x.Attribute(attributeName) != null
                 && x.Attribute(attributeName).Value.Equals(value)
             );
