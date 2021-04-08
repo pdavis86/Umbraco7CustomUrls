@@ -178,6 +178,7 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
             catch (Exception ex)
             {
                 LogHelper.Error(MethodBase.GetCurrentMethod().DeclaringType, "Something went wrong trying to create a new in-memory cache", ex);
+                throw;
             }
             finally
             {
@@ -287,7 +288,7 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
 
         private IEnumerable<XElement> GetElementsByAttributeValue(string attributeName, string value)
         {
-            var descendants = _cacheFile.Root?.Descendants();
+            var descendants = _cacheFile?.Root?.Descendants();
             if (descendants == null)
             {
                 return Enumerable.Empty<XElement>();
@@ -305,7 +306,12 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
                 var pos = id.IndexOf("/");
                 var rootContentId = pos > -1 ? id.Substring(0, pos) : id;
                 var segment = pos > -1 ? id.Substring(pos) : string.Empty;
-                return _cacheFile.Root.Descendants()
+                var descendants = _cacheFile?.Root?.Descendants();
+                if (descendants == null)
+                {
+                    return null;
+                }
+                return descendants
                     .Where(x =>
                         x.Attribute(_elementAttributeNameId) != null
                         && x.Attribute(_elementAttributeNameId).Value.StartsWith(rootContentId)
@@ -412,7 +418,7 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
             if (!int.TryParse(segments[0], out var rootContentId))
             {
                 //This should never happen. If it does, there's something wrong with the cache!
-                LogHelper.Warn(MethodBase.GetCurrentMethod().DeclaringType, $"Invalid root content ID for element ID {elementId}");
+                LogHelper.Error(MethodBase.GetCurrentMethod().DeclaringType, $"Invalid root content ID for element ID {elementId}", null);
 
                 Interlocked.Increment(ref _rootsAreMissing);
 
@@ -433,10 +439,17 @@ namespace CustomUrls.Core.Features.VortoUrlSegments
             if (startingPoint == null)
             {
                 //This should never happen. If it does, there's something wrong with the cache!
-                LogHelper.Warn(MethodBase.GetCurrentMethod().DeclaringType, $"No starting point content item was found for element ID {elementId}");
 
-                var debugFilePath = HttpContext.Current.Server.MapPath($"/App_Data/VortoUrlSegments/routecache {DateTime.UtcNow.ToString("yyyy-MM-dd HH-mm-ss-fff")}.xml");
-                _cacheFile.Save(debugFilePath);
+                if (_cacheFile != null)
+                {
+                    LogHelper.Error(MethodBase.GetCurrentMethod().DeclaringType, $"No starting point content item was found for element ID {elementId}", null);
+                    var debugFilePath = HttpContext.Current.Server.MapPath($"/App_Data/VortoUrlSegments/routecache {DateTime.UtcNow.ToString("yyyy-MM-dd HH-mm-ss-fff")}.xml");
+                    _cacheFile.Save(debugFilePath);
+                }
+                else
+                {
+                    LogHelper.Error(MethodBase.GetCurrentMethod().DeclaringType, "Cache file was null", null);
+                }
 
                 _instance = null;
 
