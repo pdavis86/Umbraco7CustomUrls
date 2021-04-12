@@ -122,7 +122,10 @@ namespace CustomUrls.Core.Features.CultureFromUrl
         {
             var cultureName = GetCultureName(current, fallbackCultureName);
 
-
+            if (string.IsNullOrWhiteSpace(cultureName))
+            {
+                return null;
+            }
 
             if (IsAllowCustomCulturesEnabled)
             {
